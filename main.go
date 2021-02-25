@@ -2,11 +2,13 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"path"
+	"runtime"
 )
 
 type obsServicesFile struct {
@@ -30,7 +32,17 @@ type obsService struct {
 	} `json:"recommended"`
 }
 
+type logWriter struct {
+}
+
+func (writer logWriter) Write(bytes []byte) (int, error) {
+	return fmt.Print(string(bytes))
+}
+
 func main() {
+	log.SetFlags(0)
+	log.SetOutput(new(logWriter))
+
 	glimeshServiceEntry := getGlimeshServiceContents("https://glimesh-static-assets.nyc3.digitaloceanspaces.com/obs-glimesh-service.json")
 
 	var glimeshService obsService
@@ -39,10 +51,20 @@ func main() {
 		log.Fatal("Problem unmarshalling Glimesh JSON entry.")
 	}
 
+	log.Println()
+
 	servicesFiles := findObsDirectories()
+
+	log.Println()
+
 	for _, serviceFile := range servicesFiles {
 		patchFile(serviceFile, glimeshService)
 	}
+
+	log.Println()
+
+	fmt.Println("Glimesh OBS Service Patcher Completed!\nPress any key or close this window.")
+	fmt.Scanln()
 }
 
 func getGlimeshServiceContents(url string) []byte {
@@ -60,7 +82,7 @@ func getGlimeshServiceContents(url string) []byte {
 		log.Fatal(err)
 	}
 
-	log.Printf("Downloaded Glimesh Service Definition from %s\n", url)
+	log.Printf("💽 Downloaded Glimesh Service Definition from %s\n", url)
 
 	return data
 }
@@ -90,12 +112,13 @@ func patchFile(filePath string, newService obsService) {
 		whatever, err := json.Marshal(services)
 		err = os.WriteFile(filePath, whatever, 0644)
 		if err != nil {
+			log.Printf("⛔️ Failed to patch file: %s", filePath)
 			log.Fatal(err)
 		}
 
-		log.Printf("Wrote to %s", filePath)
+		log.Printf("✅ Patched services file: %s", filePath)
 	} else {
-		log.Printf("Glimesh already exists in %s, ignoring.", filePath)
+		log.Printf("✅ Glimesh already exists in: %s", filePath)
 	}
 }
 
@@ -104,12 +127,13 @@ func findObsDirectories() (services []string) {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	obsPath := path.Join(configDir, "obs-studio", "plugin_config", "rtmp-services", "services.json")
 	slobsPath := path.Join(configDir, "slobs-client", "plugin_config", "rtmp-services", "services.json")
 
 	if _, err := os.Stat(obsPath); err == nil {
 		// OBS Studio Exists
-		log.Printf("Detected OBS Studio at: %s\n", obsPath)
+		log.Printf("🔍 Detected OBS Studio at: %s\n", obsPath)
 		services = append(services, obsPath)
 	}
 
@@ -117,8 +141,29 @@ func findObsDirectories() (services []string) {
 		// Streamlabs OBS Exists
 		// If Streamlabs OBS is installed, but this file does not exist, it's probably because the user needs
 		// to hit `Stream to custom ingest` to generate the RTMP services folder. Currently un-handled...
-		log.Printf("Detected Streamlabs OBS at: %s\n", slobsPath)
+		log.Printf("🔍 Detected Streamlabs OBS at: %s\n", slobsPath)
 		services = append(services, slobsPath)
+	}
+
+	if runtime.GOOS == "windows" {
+		// Weird compiled electron path for Windows SLOBS
+		// C:\Program Files\Streamlabs OBS\resources\app.asar.unpacked\node_modules\obs-studio-node\data\obs-plugins\rtmp-services
+		slobs32bitPath := path.Join(os.Getenv("programfiles(x86)"), "Streamlabs OBS", "resources", "app.asar.unpacked", "node_modules", "obs-studio-node", "data", "obs-plugins", "rtmp-services", "services.json")
+
+		slobs64bitPath := path.Join(os.Getenv("programfiles"), "Streamlabs OBS", "resources", "app.asar.unpacked", "node_modules", "obs-studio-node", "data", "obs-plugins", "rtmp-services", "services.json")
+
+		if _, err := os.Stat(slobs32bitPath); err == nil {
+			// OBS Studio Exists
+			log.Printf("🔍 Detected SLOBS Studio 32-bit at: %s\n", slobs32bitPath)
+			services = append(services, slobs32bitPath)
+		}
+
+		if _, err := os.Stat(slobs64bitPath); err == nil {
+			// OBS Studio Exists
+			log.Printf("🔍 Detected SLOBS Studio 64-bit at: %s\n", slobs64bitPath)
+			services = append(services, slobs64bitPath)
+		}
+
 	}
 
 	return services
