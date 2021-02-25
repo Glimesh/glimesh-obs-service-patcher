@@ -63,7 +63,7 @@ func main() {
 
 	log.Println()
 
-	fmt.Println("Glimesh OBS Service Patcher Completed!\nPress any key or close this window.")
+	fmt.Println("Glimesh OBS Service Patcher Completed!\nPress the Enter key or close this window.")
 	fmt.Scanln()
 }
 
