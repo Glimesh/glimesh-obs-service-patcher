@@ -1,0 +1,52 @@
+# workflow name
+name: CI
+
+# trigger events
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go 1.16
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.16
+      
+      - name: Checkout code into workspace directory
+        uses: actions/checkout@v2
+
+      - name: Install all Go dependencies
+        run: go get
+      
+      - name: go test
+        run: go test
+
+  build:
+    name: Build and Run
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go 1.16
+        uses: actions/setup-go@v1
+        with:
+          go-version: 1.16
+      
+      - name: Checkout code into workspace directory
+        uses: actions/checkout@v2
+
+      - name: Install all Go dependencies
+        run: go get
+      
+      - name: go build
+        run: go build
+
+      - name: ./glimesh-obs-service-patcher
+        run: ./glimesh-obs-service-patcher
