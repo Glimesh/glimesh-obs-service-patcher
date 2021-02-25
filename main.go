@@ -113,6 +113,7 @@ func patchFile(filePath string, newService obsService) {
 		err = os.WriteFile(filePath, whatever, 0644)
 		if err != nil {
 			log.Printf("⛔️ Failed to patch file: %s", filePath)
+			log.Println("⛔️ Please try running the program as an Administrator")
 			log.Fatal(err)
 		}
 
