@@ -12,8 +12,8 @@ import (
 )
 
 type obsServicesFile struct {
-	FormatVersion int `json:"format_version"`
-	Services      []obsService
+	FormatVersion int          `json:"format_version"`
+	Services      []obsService `json:"services"`
 }
 
 type obsService struct {
@@ -39,6 +39,13 @@ func (writer logWriter) Write(bytes []byte) (int, error) {
 	return fmt.Print(string(bytes))
 }
 
+func panicAndPause(v ...interface{}) {
+	log.Print(v...)
+	fmt.Println("Glimesh OBS Service Patcher Failed!\nPress the Enter key or close this window.")
+	fmt.Scanln()
+	os.Exit(1)
+}
+
 func main() {
 	log.SetFlags(0)
 	log.SetOutput(new(logWriter))
@@ -48,7 +55,7 @@ func main() {
 	var glimeshService obsService
 	err := json.Unmarshal([]byte(glimeshServiceEntry), &glimeshService)
 	if err != nil {
-		log.Fatal("Problem unmarshalling Glimesh JSON entry.")
+		panicAndPause("Problem unmarshalling Glimesh JSON entry.")
 	}
 
 	log.Println()
@@ -70,16 +77,16 @@ func main() {
 func getGlimeshServiceContents(url string) []byte {
 	resp, err := http.Get(url)
 	if err != nil {
-		log.Fatal(err)
+		panicAndPause(err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		log.Fatal("Got an error code from the CDN")
+		panicAndPause("Got an error code from the CDN")
 	}
 
 	data, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		panicAndPause(err)
 	}
 
 	log.Printf("💽 Downloaded Glimesh Service Definition from %s\n", url)
@@ -90,7 +97,7 @@ func getGlimeshServiceContents(url string) []byte {
 func patchFile(filePath string, newService obsService) {
 	servicesFile, err := os.Open(filePath)
 	if err != nil {
-		log.Fatal(err)
+		panicAndPause(err)
 	}
 
 	var services obsServicesFile
@@ -109,12 +116,11 @@ func patchFile(filePath string, newService obsService) {
 	if foundGlimesh == false {
 		services.Services = append(services.Services, newService)
 
-		whatever, err := json.Marshal(services)
+		whatever, err := json.MarshalIndent(services, "", "    ")
 		err = os.WriteFile(filePath, whatever, 0644)
 		if err != nil {
 			log.Printf("⛔️ Failed to patch file: %s", filePath)
-			log.Println("⛔️ Please try running the program as an Administrator")
-			log.Fatal(err)
+			panicAndPause("⛔️ Please try running the program as an Administrator")
 		}
 
 		log.Printf("✅ Patched services file: %s", filePath)
@@ -126,7 +132,7 @@ func patchFile(filePath string, newService obsService) {
 func findObsDirectories() (services []string) {
 	configDir, err := os.UserConfigDir()
 	if err != nil {
-		log.Fatal(err)
+		panicAndPause(err)
 	}
 
 	obsPath := path.Join(configDir, "obs-studio", "plugin_config", "rtmp-services", "services.json")
