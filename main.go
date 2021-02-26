@@ -173,5 +173,18 @@ func findObsDirectories() (services []string) {
 
 	}
 
+	if runtime.GOOS == "darwin" {
+		// Weird compiled electron path for Mac SLOBS
+		// /Applications/Streamlabs OBS.app/Contents/Resources/app.asar.unpacked/node_modules/obs-studio-node/data/obs-plugins/rtmp-services/services.json
+		slobsAppPath := path.Join("/", "Applications", "Streamlabs OBS.app", "Contents", "Resources", "app.asar.unpacked", "node_modules", "obs-studio-node", "data", "obs-plugins", "rtmp-services", "services.json")
+		fmt.Println(slobsAppPath)
+
+		if _, err := os.Stat(slobsAppPath); err == nil {
+			// OBS Studio Exists
+			log.Printf("🔍 Detected SLOBS Studio at: %s\n", slobsAppPath)
+			services = append(services, slobsAppPath)
+		}
+	}
+
 	return services
 }
