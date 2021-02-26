@@ -135,6 +135,7 @@ func findObsDirectories() (services []string) {
 		panicAndPause(err)
 	}
 
+	// Traditional config based path, that beautiful open source projects like OBS Studio use
 	obsPath := path.Join(configDir, "obs-studio", "plugin_config", "rtmp-services", "services.json")
 	slobsPath := path.Join(configDir, "slobs-client", "plugin_config", "rtmp-services", "services.json")
 
@@ -146,12 +147,11 @@ func findObsDirectories() (services []string) {
 
 	if _, err := os.Stat(slobsPath); err == nil {
 		// Streamlabs OBS Exists
-		// If Streamlabs OBS is installed, but this file does not exist, it's probably because the user needs
-		// to hit `Stream to custom ingest` to generate the RTMP services folder. Currently un-handled...
 		log.Printf("🔍 Detected Streamlabs OBS at: %s\n", slobsPath)
 		services = append(services, slobsPath)
 	}
 
+	// Gross electron packaged non-config directories that we have to inject into
 	if runtime.GOOS == "windows" {
 		// Weird compiled electron path for Windows SLOBS
 		// C:\Program Files\Streamlabs OBS\resources\app.asar.unpacked\node_modules\obs-studio-node\data\obs-plugins\rtmp-services
@@ -161,13 +161,13 @@ func findObsDirectories() (services []string) {
 
 		if _, err := os.Stat(slobs32bitPath); err == nil {
 			// OBS Studio Exists
-			log.Printf("🔍 Detected SLOBS Studio 32-bit at: %s\n", slobs32bitPath)
+			log.Printf("🔍 Detected SLOBS Electron 32-bit at: %s\n", slobs32bitPath)
 			services = append(services, slobs32bitPath)
 		}
 
 		if _, err := os.Stat(slobs64bitPath); err == nil {
 			// OBS Studio Exists
-			log.Printf("🔍 Detected SLOBS Studio 64-bit at: %s\n", slobs64bitPath)
+			log.Printf("🔍 Detected SLOBS Electron 64-bit at: %s\n", slobs64bitPath)
 			services = append(services, slobs64bitPath)
 		}
 
@@ -177,11 +177,10 @@ func findObsDirectories() (services []string) {
 		// Weird compiled electron path for Mac SLOBS
 		// /Applications/Streamlabs OBS.app/Contents/Resources/app.asar.unpacked/node_modules/obs-studio-node/data/obs-plugins/rtmp-services/services.json
 		slobsAppPath := path.Join("/", "Applications", "Streamlabs OBS.app", "Contents", "Resources", "app.asar.unpacked", "node_modules", "obs-studio-node", "data", "obs-plugins", "rtmp-services", "services.json")
-		fmt.Println(slobsAppPath)
 
 		if _, err := os.Stat(slobsAppPath); err == nil {
 			// OBS Studio Exists
-			log.Printf("🔍 Detected SLOBS Studio at: %s\n", slobsAppPath)
+			log.Printf("🔍 Detected SLOBS Electron at: %s\n", slobsAppPath)
 			services = append(services, slobsAppPath)
 		}
 	}
