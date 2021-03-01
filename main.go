@@ -167,7 +167,7 @@ func updateFromOfficialSource(servicePath string) {
 		panicAndPause(err)
 	}
 
-	servicesFile := path.Join(servicePath, "services2.json")
+	servicesFile := path.Join(servicePath, "services.json")
 	err = os.WriteFile(servicesFile, data, 0644)
 	if err != nil {
 		log.Printf("⛔️ Failed to patch file: %s", servicesFile)
