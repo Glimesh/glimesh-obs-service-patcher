@@ -17,19 +17,32 @@ type obsServicesFile struct {
 }
 
 type obsService struct {
-	Name    string `json:"name"`
-	Servers []struct {
+	Name     string   `json:"name"`
+	AltNames []string `json:"alt_names,omitempty"`
+	Common   bool     `json:"common,omitempty"`
+	Servers  []struct {
 		Name string `json:"name"`
 		URL  string `json:"url"`
 	} `json:"servers"`
-	Recommended struct {
-		Keyint          int    `json:"keyint"`
-		Output          string `json:"output"`
-		MaxAudioBitrate int    `json:"max audio bitrate"`
-		MaxVideoBitrate int    `json:"max video bitrate"`
-		Bframes         int    `json:"bframes"`
-		X264Opts        string `json:"x264opts"`
-	} `json:"recommended"`
+	Recommended *struct {
+		Keyint          *int   `json:"keyint,omitempty"`
+		Profile         string `json:"profile,omitempty"`
+		Output          string `json:"output,omitempty"`
+		MaxVideoBitrate int    `json:"max video bitrate,omitempty"`
+		MaxAudioBitrate int    `json:"max audio bitrate,omitempty"`
+		Bframes         *int   `json:"bframes,omitempty"`
+		X264Opts        string `json:"x264opts,omitempty"`
+	} `json:"recommended,omitempty"`
+	// For some reason a few services use 'recommend' instead of 'recommended'
+	Recommend *struct {
+		Keyint          *int   `json:"keyint,omitempty"`
+		Profile         string `json:"profile,omitempty"`
+		Output          string `json:"output,omitempty"`
+		MaxVideoBitrate int    `json:"max video bitrate,omitempty"`
+		MaxAudioBitrate int    `json:"max audio bitrate,omitempty"`
+		Bframes         *int   `json:"bframes,omitempty"`
+		X264Opts        string `json:"x264opts,omitempty"`
+	} `json:"recommend,omitempty"`
 }
 
 type logWriter struct {
