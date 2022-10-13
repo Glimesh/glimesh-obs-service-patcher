@@ -62,12 +62,20 @@ func main() {
 	log.SetFlags(0)
 	log.SetOutput(new(logWriter))
 
-	glimeshServiceEntry := getGlimeshServiceContents("https://glimesh-static-assets.nyc3.digitaloceanspaces.com/obs-glimesh-service.json")
+	var err error
 
-	var glimeshService obsService
-	err := json.Unmarshal([]byte(glimeshServiceEntry), &glimeshService)
+	glimeshRawFtlService := getGlimeshServiceContents("https://glimesh-static-assets.nyc3.digitaloceanspaces.com/obs-glimesh-service.json")
+	glimeshRawRtmpService := getGlimeshServiceContents("https://glimesh-static-assets.nyc3.digitaloceanspaces.com/obs-glimesh-rtmp-service.json")
+
+	var glimeshFtlService obsService
+	err = json.Unmarshal(glimeshRawFtlService, &glimeshFtlService)
 	if err != nil {
-		panicAndPause("Problem unmarshalling Glimesh JSON entry.")
+		panicAndPause("Problem unmarshalling Glimesh FTL JSON entry.")
+	}
+	var glimeshRtmpService obsService
+	err = json.Unmarshal(glimeshRawRtmpService, &glimeshRtmpService)
+	if err != nil {
+		panicAndPause("Problem unmarshalling Glimesh RTMP JSON entry.")
 	}
 
 	log.Println()
@@ -81,7 +89,7 @@ func main() {
 	log.Println()
 
 	for _, servicePath := range servicePaths {
-		patchFile(path.Join(servicePath, "services.json"), glimeshService)
+		patchFile(path.Join(servicePath, "services.json"), glimeshFtlService, glimeshRtmpService)
 	}
 
 	log.Println()
@@ -110,24 +118,37 @@ func getGlimeshServiceContents(url string) []byte {
 	return data
 }
 
-func patchFile(filePath string, newService obsService) {
+func patchFile(filePath string, ftlService obsService, rtmpService obsService) {
 	servicesFile, err := os.Open(filePath)
 	if err != nil {
 		panicAndPause(err)
 	}
 
 	var services obsServicesFile
-	byteValue, err := ioutil.ReadAll(servicesFile)
+	byteValue, _ := ioutil.ReadAll(servicesFile)
 	json.Unmarshal(byteValue, &services)
 
-	foundGlimesh := strings.Contains(string(byteValue), "Glimesh")
+	// Since the names conflict, check for a particular ingest now
+	foundGlimesh := strings.Contains(string(byteValue), "\"ingest.kord.live.glimesh.tv\"")
+	foundGlimeshRtmp := strings.Contains(string(byteValue), "Glimesh - RTMP")
+
+	fmt.Println(foundGlimesh)
+	fmt.Println(foundGlimeshRtmp)
 
 	servicesFile.Close()
 
-	if foundGlimesh == false {
-		services.Services = append(services.Services, newService)
+	hasChanges := false
+	if !foundGlimesh {
+		services.Services = append(services.Services, ftlService)
+		hasChanges = true
+	}
+	if !foundGlimeshRtmp {
+		services.Services = append(services.Services, rtmpService)
+		hasChanges = true
+	}
 
-		newContents, err := customJSONMarshal(services)
+	if hasChanges {
+		newContents, _ := customJSONMarshal(services)
 		err = os.WriteFile(filePath, newContents, 0644)
 		if err != nil {
 			log.Printf("⛔️ Failed to patch file: %s", filePath)
@@ -135,8 +156,10 @@ func patchFile(filePath string, newService obsService) {
 		}
 
 		log.Printf("✅ Patched services file: %s", filePath)
+		log.Print("✅ Glimesh RTMP")
+		log.Print("✅ Patched FTL")
 	} else {
-		log.Printf("✅ Glimesh already exists in: %s", filePath)
+		log.Printf("✅ Glimesh RTMP & FTL already exists in: %s", filePath)
 	}
 }
 
@@ -241,10 +264,10 @@ func customJSONMarshal(t interface{}) ([]byte, error) {
 
 	encoder := json.NewEncoder(buffer)
 	encoder.SetEscapeHTML(false)
-	err := encoder.Encode(t)
+	encoder.Encode(t)
 
 	var buf bytes.Buffer
-	err = json.Indent(&buf, buffer.Bytes(), "", "    ")
+	err := json.Indent(&buf, buffer.Bytes(), "", "    ")
 	if err != nil {
 		return nil, err
 	}
